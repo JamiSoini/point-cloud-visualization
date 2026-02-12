@@ -1,10 +1,11 @@
 import * as THREE from "three";
-import { PLYLoader } from "three/examples/jsm/Addons.js";
 import { OrbitControls } from "three/examples/jsm/Addons.js";
+import type { SceneController } from "./SceneController";
 
+//Three.js rendering environment
 export async function initScene(
     container: HTMLDivElement
-):  Promise<{ cleanup: () => void}> {
+):  Promise<{ controller: SceneController ; cleanup: () => void}> {
 
     //create scene, camera, renderer and controls
     const scene = new THREE.Scene();
@@ -15,8 +16,8 @@ export async function initScene(
     camera.position.z = 90; //10-1000 small to big point clouds (will do automatic position later)
 
     const renderer = new THREE.WebGLRenderer();
-    renderer.setSize(1920, 1080);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setSize(800, 600);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -29,16 +30,28 @@ export async function initScene(
         alphaTest: 0.5
     });
 
-    //load geometry for the point cloud data for points
-    const loader = new PLYLoader();
-    const url = import.meta.env.BASE_URL + "pointclouds/stairs.ply";
-    const geometry = await loader.loadAsync(url);
-    geometry.computeBoundingBox();
-    geometry.center();
-
-    //create points, add to scene
-    let points = new THREE.Points(geometry, material)
-    scene.add(points);
+    //create replacable points to render with PLY geometry and material
+    let points: THREE.Points | null = null;
+    function setGeometry(geometry: THREE.BufferGeometry) {
+        console.log("setGeomety called!");
+        //replace old geometry
+        if (points) {
+            scene.remove(points);
+            points.geometry.dispose();
+        }
+        points = new THREE.Points(geometry, material);
+        scene.add(points);
+        //automatic camera placement on load
+        const sphere = geometry.boundingSphere;
+        if (sphere) {
+            const distance = sphere.radius * 1.7;
+            camera.position.set( sphere.center.x, sphere.center.y, sphere.center.z + distance );
+            controls.target.copy(sphere.center);
+            controls.update();
+        }
+        console.log("setGeometry called, positions:", geometry.getAttribute("position").count);
+        console.log("vertexColors", geometry.getAttribute("color"));
+    }
 
     //animation loop
     let running = true;
@@ -50,14 +63,17 @@ export async function initScene(
     }
     animate();
 
-    //cleanup function required
+    //cleanup function removes DOM elements freeing GPU resources when React unmounts
     function dispose() {
         running = false;
-        geometry.dispose();
+        if (points) points.geometry.dispose();
         material.dispose();
         renderer.dispose();
         controls.dispose();
         container.removeChild(renderer.domElement);
     }
-    return { cleanup: dispose };
+
+    const controller: SceneController = {setGeometry, dispose};
+
+    return { controller, cleanup: dispose };
 }

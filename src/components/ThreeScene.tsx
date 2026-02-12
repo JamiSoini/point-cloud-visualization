@@ -1,16 +1,27 @@
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { initScene } from "../three-utils/threePointCloudRenderer";
+import type { SceneController } from "../three-utils/SceneController";
 
 //mount three.js scene into a div element, initialize it and store cleanup
-export default function ThreeScene() {
+export const ThreeScene = forwardRef<SceneController>((_, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const [controller, setController] = useState<SceneController | null>(null);
 
+    //fallback so the ref always correct shape
+    const fallbackController: SceneController = {
+        setGeometry: () => console.warn("Scene not ready"),
+        dispose: () => {} 
+    };
+
+    useImperativeHandle(ref, () => controller ?? fallbackController, [controller]);
     useEffect(() => {
         if (!containerRef.current) return;
 
         let cleanup: (() => void) | undefined;
 
-        initScene(containerRef.current).then(({ cleanup: fn }) => {
+        initScene(containerRef.current).then(({ controller, cleanup: fn }) => {
+            console.log("initScene finished, controller ready");
+            setController(controller);
             cleanup = fn;
         });
         
@@ -20,4 +31,4 @@ export default function ThreeScene() {
     return (
         <div ref={containerRef} />
     );
-}
+});
