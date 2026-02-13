@@ -22,13 +22,28 @@ export async function initScene(
 
     const controls = new OrbitControls(camera, renderer.domElement);
 
-    //create material for points
+    //create material for points using custom texture for better visuals
+    const texture = createCircleTexture(64);
     const material = new THREE.PointsMaterial({
         size: 0.1,
         sizeAttenuation: true,
         vertexColors: true,
-        alphaTest: 0.5
+        map: texture,
+        alphaTest: 0.5,
+        depthWrite: false
     });
+
+    //functions to enable material changes for user
+    //differen visuals by changing point size and depth write
+    function setPointSize(size: number) {
+        material.size = size;
+        material.needsUpdate = true;
+    }
+
+    function setDepthWrite(enabled: boolean) {
+        material.depthWrite = enabled;
+        material.needsUpdate = true;
+    }
 
     //create replacable points to render with PLY geometry and material
     let points: THREE.Points | null = null;
@@ -68,12 +83,30 @@ export async function initScene(
         running = false;
         if (points) points.geometry.dispose();
         material.dispose();
+        texture.dispose();
         renderer.dispose();
         controls.dispose();
         container.removeChild(renderer.domElement);
     }
 
-    const controller: SceneController = {setGeometry, dispose};
+    const controller: SceneController = {setGeometry, setPointSize, setDepthWrite, dispose};
 
     return { controller, cleanup: dispose };
+
+    //create circular custom texture for point material
+    function createCircleTexture(size = 64) {
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = size;
+        const ctx = canvas.getContext("2d")!;
+        ctx.clearRect(0, 0, size, size);
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+        ctx.fill();
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.generateMipmaps = false;
+        return texture;
+    }
 }

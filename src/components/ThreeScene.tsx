@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { initScene } from "../three-utils/threePointCloudRenderer";
+import { initScene } from "../three-utils/threePointCloudScene";
 import type { SceneController } from "../three-utils/SceneController";
 
 //mount three.js scene into a div element, initialize it and store cleanup
@@ -10,6 +10,8 @@ export const ThreeScene = forwardRef<SceneController>((_, ref) => {
     //fallback so the ref always correct shape
     const fallbackController: SceneController = {
         setGeometry: () => console.warn("Scene not ready"),
+        setPointSize: () => {},
+        setDepthWrite: () => {},
         dispose: () => {} 
     };
 
