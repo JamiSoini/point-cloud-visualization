@@ -5,6 +5,7 @@ import { loadPLYFromBuffer } from "./three-utils/loadPointCloud";
 import { ImportPointCloudButton } from "./components/ImportButton";
 import { PointSizeControls } from "./components/PointSizeControls";
 import { DepthWriteToggle } from "./components/DepthWriteToggle";
+import "./App.css";
 
 export default function App() {
   const sceneRef = useRef<SceneController>(null);
@@ -15,14 +16,19 @@ export default function App() {
   }
 
   return (
-    <div>
-      <div>
-        <ImportPointCloudButton onFileLoaded={handleFileLoaded} />
-        <PointSizeControls sceneRef={sceneRef} />
-        <DepthWriteToggle sceneRef={sceneRef} />
+    <div className="app">
+      <div className="tools">
+        <div className="tools-content">
+          <ImportPointCloudButton onFileLoaded={handleFileLoaded} />
+          <div className="tools-label">Set Point Size</div>
+          <PointSizeControls sceneRef={sceneRef} />
+          <DepthWriteToggle sceneRef={sceneRef} />
+        </div>
       </div>
-      <div>
-        <ThreeScene ref={sceneRef} />
+      <div className="content">
+        <div className="scene-container">
+          <ThreeScene ref={sceneRef} />
+        </div>
       </div>
     </div>
   );

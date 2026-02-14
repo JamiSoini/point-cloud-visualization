@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/Addons.js";
 import type { SceneController } from "./SceneController";
+import Stats from "stats.js";
 
 //Three.js rendering environment
 export async function initScene(
@@ -10,15 +11,27 @@ export async function initScene(
     //create scene, camera, renderer and controls
     const scene = new THREE.Scene();
 
+    //add axes helper to the scene, so directions and center of the scene is easy to see
+    const axesHelper = new THREE.AxesHelper(4);
+    scene.add(axesHelper);
+
     //in PerspectiveCamera faraway objects look smaller 
     //fov, aspect ratio, clipping near: 0.1-1.0, clipping far: 1 000-10 000
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 4000);
     camera.position.z = 90; //10-1000 small to big point clouds (will do automatic position later)
 
     const renderer = new THREE.WebGLRenderer();
-    renderer.setSize(800, 600);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
+
+    function resize() {
+        const { clientWidth, clientHeight } = container;
+        camera.aspect = clientWidth / clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(clientWidth, clientHeight, false);
+    }
+    resize();
+    window.addEventListener("resize", resize);
 
     const controls = new OrbitControls(camera, renderer.domElement);
 
@@ -68,6 +81,12 @@ export async function initScene(
         console.log("vertexColors", geometry.getAttribute("color"));
     }
 
+    //show performance | might create a React component to attatch to spesific scenes
+    const stats = new Stats();
+    container.appendChild(stats.dom);
+    stats.dom.style.top = "11px";
+    stats.dom.style.left = "38px";
+
     //animation loop
     let running = true;
     function animate() {
@@ -75,6 +94,7 @@ export async function initScene(
         requestAnimationFrame(animate);
         controls.update();
         renderer.render(scene, camera);
+        stats.update();
     }
     animate();
 
@@ -86,7 +106,10 @@ export async function initScene(
         texture.dispose();
         renderer.dispose();
         controls.dispose();
+        axesHelper.dispose();
+        container.removeChild(stats.dom);
         container.removeChild(renderer.domElement);
+        window.removeEventListener("resize", resize);
     }
 
     const controller: SceneController = {setGeometry, setPointSize, setDepthWrite, dispose};
