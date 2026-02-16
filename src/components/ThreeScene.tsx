@@ -12,6 +12,8 @@ export const ThreeScene = forwardRef<SceneController>((_, ref) => {
         setGeometry: () => console.warn("Scene not ready"),
         setPointSize: () => {},
         setDepthWrite: () => {},
+        setBackground: () => {},
+        setControls: () => {},
         dispose: () => {} 
     };
 

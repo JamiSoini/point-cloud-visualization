@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/Addons.js";
-import type { SceneController } from "./SceneController";
+import { OrbitControls, TrackballControls } from "three/examples/jsm/Addons.js";
+import type { SceneController, ControlMode } from "./SceneController";
 import Stats from "stats.js";
 
 //Three.js rendering environment
@@ -10,6 +10,16 @@ export async function initScene(
 
     //create scene, camera, renderer and controls
     const scene = new THREE.Scene();
+
+    //create background options
+    const LIGHT_BG = 0xEAEAEA;
+    const DARK_BG = 0x000020;
+    const cubeTextureLoader = new THREE.CubeTextureLoader();
+    const base = import.meta.env.BASE_URL;
+    const skyboxTexture = cubeTextureLoader.load([
+        `${base}skybox/px.png`,`${base}skybox/nx.png`,`${base}skybox/py.png`,`${base}skybox/ny.png`,`${base}skybox/pz.png`,`${base}skybox/nz.png`
+    ]);
+    scene.background = new THREE.Color( DARK_BG );
 
     //add axes helper to the scene, so directions and center of the scene is easy to see
     const axesHelper = new THREE.AxesHelper(4);
@@ -33,7 +43,29 @@ export async function initScene(
     resize();
     window.addEventListener("resize", resize);
 
-    const controls = new OrbitControls(camera, renderer.domElement);
+    //toggleable controls
+    let controls: OrbitControls | TrackballControls;
+    let controlMode: ControlMode = "orbit";
+
+    function createControls(mode: ControlMode) {
+        controls?.dispose();
+        if (mode === "orbit") {
+            const orbit = new OrbitControls(camera, renderer.domElement);
+            orbit.enableDamping = true;
+            orbit.dampingFactor = 0.05;
+            orbit.target.set(0, 0, 0);
+            orbit.update();
+            controls = orbit;
+        } else {
+            const trackball = new TrackballControls(camera, renderer.domElement);
+            trackball.rotateSpeed = 3.0;
+            trackball.zoomSpeed = 1.2;
+            trackball.panSpeed = 0.8;
+            controls = trackball;
+        }
+        controlMode = mode;
+    }
+    createControls("orbit");
 
     //create material for points using custom texture for better visuals
     const texture = createCircleTexture(64);
@@ -56,6 +88,27 @@ export async function initScene(
     function setDepthWrite(enabled: boolean) {
         material.depthWrite = enabled;
         material.needsUpdate = true;
+    }
+
+    //function for user to choose a background
+    function setBackground(mode: "light" | "dark" | "skybox") {
+        switch (mode) {
+        case "light":
+            scene.background = new THREE.Color(LIGHT_BG);
+            break;
+        case "dark":
+            scene.background = new THREE.Color(DARK_BG);
+            break;
+        case "skybox":
+            scene.background = skyboxTexture;
+            break;
+        }
+    }
+
+    //toggle between contorl modes
+    function setControls(mode: ControlMode) {
+        if (mode === controlMode) return;
+        createControls(mode);
     }
 
     //create replacable points to render with PLY geometry and material
@@ -107,12 +160,13 @@ export async function initScene(
         renderer.dispose();
         controls.dispose();
         axesHelper.dispose();
+        skyboxTexture.dispose();
         container.removeChild(stats.dom);
         container.removeChild(renderer.domElement);
         window.removeEventListener("resize", resize);
     }
 
-    const controller: SceneController = {setGeometry, setPointSize, setDepthWrite, dispose};
+    const controller: SceneController = {setGeometry, setPointSize, setDepthWrite, setBackground, setControls, dispose};
 
     return { controller, cleanup: dispose };
 
