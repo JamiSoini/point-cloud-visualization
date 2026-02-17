@@ -10,7 +10,7 @@ export function PointSizeControls({ sceneRef }: Props) {
         <select
             defaultValue="0.1"
             onChange={(e) =>
-                sceneRef.current?.setPointSize(Number(e.target.value))
+                sceneRef.current?.setPointSize?.(Number(e.target.value))
             }
         >
             <option value="3">Large</option>
